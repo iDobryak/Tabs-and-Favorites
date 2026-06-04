@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tab Duplicate Cleaner</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <h1>Открытые ссылки</h1>
+
+  <section class="settings">
+    <label>
+      <input type="checkbox" id="includeQueryParams" checked />
+      Учитывать query-параметры
+    </label>
+
+    <label>
+      <input type="checkbox" id="includeHash" />
+      Учитывать hash-атрибуты
+    </label>
+
+    <label>
+      <input type="checkbox" id="ignoreTrailingSlash" checked />
+      Считать /page и /page/ одинаковыми
+    </label>
+
+    <label>
+      <input type="checkbox" id="protectPinnedTabs" checked />
+      Не закрывать и не переносить закреплённые вкладки
+    </label>
+  </section>
+
+  <section class="actions">
+    <button id="rescanButton">Обновить список</button>
+    <button id="closeAllDuplicatesButton" class="danger">Удалить все дубликаты</button>
+    <button id="sortCurrentWindowButton">Отсортировать текущее окно</button>
+    <button id="sortAllWindowsButton">Отсортировать все окна</button>
+    <button id="groupSitesToWindowsButton">Разнести сайты по окнам</button>
+  </section>
+
+  <div id="status"></div>
+  <main id="sites"></main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
