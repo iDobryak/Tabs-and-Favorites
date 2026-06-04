@@ -19,13 +19,16 @@
 - Add confirmation UX for destructive bulk actions.
 - Restrict supported URLs to an explicit allowlist such as `http:` and `https:`.
 - Reduce repeated URL parsing and repeated option reads during sorting and grouping.
+- Split `popup.js` into smaller modules with separate domain, action, and UI responsibilities.
+- Update `README.md` so the documented behavior matches the implemented behavior.
+- Add basic project tooling such as `package.json`, linting, and formatting configuration.
+- Add unit tests for URL normalization, grouping, and duplicate detection behavior.
+- Install dev dependencies from `package.json`.
+- Run `npm run lint`.
+- Run `npm run format:check`.
 
 ### in_progress
 
-- Split `popup.js` into smaller modules with separate domain, action, and UI responsibilities.
+- No active tasks.
 
 ### todo
-
-- Add basic project tooling such as `package.json`, linting, and formatting configuration.
-- Add unit tests for URL normalization, grouping, and duplicate detection behavior.
-- Update `README.md` so the documented behavior matches the implemented behavior.
