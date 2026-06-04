@@ -37,7 +37,19 @@
       </button>
       <button id="sortCurrentWindowButton">Отсортировать текущее окно</button>
       <button id="sortAllWindowsButton">Отсортировать все окна</button>
-      <button id="groupSitesToWindowsButton">Разнести сайты по окнам</button>
+      <div class="action-with-input">
+        <button id="groupSitesToWindowsButton">Разнести сайты по окнам</button>
+        <label class="inline-number-field" for="tabsPerWindowLimit">
+          <span>Вкладок в окне</span>
+          <input
+            id="tabsPerWindowLimit"
+            type="number"
+            min="1"
+            step="1"
+            value="20"
+          />
+        </label>
+      </div>
     </section>
 
     <div id="status"></div>

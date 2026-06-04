@@ -1,5 +1,9 @@
 import { buildSiteGroups, getDuplicateTabIds } from './lib/groups.js';
 import {
+  activateTab,
+  buildWindowTabGroups,
+  closeSiteTabsByIds,
+  closeTabById,
   closeDuplicateTabsByIds,
   moveSitesToSeparateWindows,
   sortTabsInAllWindows,
@@ -14,6 +18,7 @@ const elements = {
   includeHash: document.getElementById('includeHash'),
   ignoreTrailingSlash: document.getElementById('ignoreTrailingSlash'),
   protectPinnedTabs: document.getElementById('protectPinnedTabs'),
+  tabsPerWindowLimit: document.getElementById('tabsPerWindowLimit'),
   rescanButton: document.getElementById('rescanButton'),
   closeAllDuplicatesButton: document.getElementById('closeAllDuplicatesButton'),
   sortCurrentWindowButton: document.getElementById('sortCurrentWindowButton'),
@@ -56,7 +61,8 @@ function bindEvents() {
     elements.includeQueryParams,
     elements.includeHash,
     elements.ignoreTrailingSlash,
-    elements.protectPinnedTabs
+    elements.protectPinnedTabs,
+    elements.tabsPerWindowLimit
   ].forEach((checkbox) => {
     checkbox.addEventListener('change', async () => {
       await saveSettings(getOptions(elements));
@@ -85,7 +91,10 @@ async function scanAndRenderWithStatus(statusPrefix = '') {
     elements,
     siteGroups: state.siteGroups,
     options,
-    onCloseSiteDuplicates: handleCloseSiteDuplicates
+    onCloseSiteDuplicates: handleCloseSiteDuplicates,
+    onCloseSite: handleCloseSite,
+    onCloseTab: handleCloseTab,
+    onActivateTab: handleActivateTab
   });
 
   const duplicateCount = getDuplicateTabIds(state.siteGroups, options).length;
@@ -109,6 +118,40 @@ async function handleCloseSiteDuplicates(siteGroup, duplicateIdsForSite) {
   }
 
   await applyAction(closeDuplicateTabsByIds(duplicateIdsForSite));
+}
+
+async function handleCloseSite(siteGroup) {
+  const tabIds = getClosableTabIds(siteGroup, getOptions(elements));
+
+  if (tabIds.length === 0) {
+    elements.status.textContent = 'Нет вкладок сайта для закрытия.';
+    return;
+  }
+
+  if (
+    !confirmBulkAction(
+      `Закрыть ${tabIds.length} вкладок сайта ${siteGroup.site}?`
+    )
+  ) {
+    return;
+  }
+
+  await applyAction(closeSiteTabsByIds(tabIds));
+}
+
+async function handleCloseTab(tab) {
+  if (getOptions(elements).protectPinnedTabs && tab.pinned) {
+    elements.status.textContent =
+      'Закрытие закреплённой вкладки запрещено текущими настройками.';
+    return;
+  }
+
+  await applyAction(closeTabById(tab.id));
+}
+
+async function handleActivateTab(tab) {
+  const { message } = await activateTab(tab.id, tab.windowId);
+  elements.status.textContent = message;
 }
 
 async function handleCloseAllDuplicates() {
@@ -141,17 +184,20 @@ async function handleSortAllWindows() {
 
 async function handleMoveSitesToSeparateWindows() {
   const options = getOptions(elements);
-  const movableTabsCount = state.siteGroups
-    .flatMap((siteGroup) => siteGroup.urlGroups)
-    .flatMap((urlGroup) => urlGroup.tabs)
-    .filter((tab) => !options.protectPinnedTabs || !tab.pinned).length;
+  elements.tabsPerWindowLimit.value = String(options.tabsPerWindowLimit);
+  const windowTabGroups = buildWindowTabGroups(state.siteGroups, options);
+  const movableTabsCount = windowTabGroups.flat().length;
 
   if (movableTabsCount === 0) {
     elements.status.textContent = 'Нет вкладок для разнесения по окнам.';
     return;
   }
 
-  if (!confirmBulkAction(`Разнести по окнам ${movableTabsCount} вкладок?`)) {
+  if (
+    !confirmBulkAction(
+      `Сформировать ${windowTabGroups.length} окон и перенести ${movableTabsCount} вкладок?`
+    )
+  ) {
     return;
   }
 
@@ -165,4 +211,11 @@ async function applyAction(actionPromise) {
 
 function confirmBulkAction(message) {
   return window.confirm(message);
+}
+
+function getClosableTabIds(siteGroup, options) {
+  return siteGroup.urlGroups
+    .flatMap((urlGroup) => urlGroup.tabs)
+    .filter((tab) => !options.protectPinnedTabs || !tab.pinned)
+    .map((tab) => tab.id);
 }

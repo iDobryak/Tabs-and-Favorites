@@ -7,6 +7,7 @@ import {
   groupTabsByWindow,
   prepareTabsForSorting
 } from '../lib/groups.js';
+import { buildWindowTabGroups } from '../lib/tabActions.js';
 
 const options = {
   includeQueryParams: false,
@@ -105,3 +106,85 @@ test('prepareTabsForSorting computes stable sort fields', () => {
   );
   assert.equal(preparedTab.sortTitle, 'Title');
 });
+
+test('buildWindowTabGroups keeps oversized site in its own window', () => {
+  const siteGroups = [
+    {
+      site: 'alpha.example',
+      totalTabs: 21,
+      urlGroups: [
+        {
+          normalizedUrl: 'https://alpha.example',
+          tabs: Array.from({ length: 21 }, (_, index) => ({
+            id: index + 1,
+            url: `https://alpha.example/${index + 1}`,
+            title: `Alpha ${index + 1}`,
+            pinned: false
+          }))
+        }
+      ]
+    }
+  ];
+
+  const windowTabGroups = buildWindowTabGroups(siteGroups, {
+    ...options,
+    tabsPerWindowLimit: 20
+  });
+
+  assert.equal(windowTabGroups.length, 1);
+  assert.equal(windowTabGroups[0].length, 21);
+});
+
+test('buildWindowTabGroups accumulates sites by display order until limit', () => {
+  const siteGroups = [
+    createSiteGroup('alpha.example', 10, 1),
+    createSiteGroup('beta.example', 4, 11),
+    createSiteGroup('gamma.example', 5, 15),
+    createSiteGroup('delta.example', 2, 20)
+  ];
+
+  const windowTabGroups = buildWindowTabGroups(siteGroups, {
+    ...options,
+    tabsPerWindowLimit: 20
+  });
+
+  assert.equal(windowTabGroups.length, 2);
+  assert.deepEqual(
+    windowTabGroups.map((tabs) => tabs.length),
+    [19, 2]
+  );
+  assert.deepEqual(
+    windowTabGroups[0].map((tab) => getSiteFromUrl(tab.url)),
+    [
+      ...Array.from({ length: 10 }, () => 'alpha.example'),
+      ...Array.from({ length: 4 }, () => 'beta.example'),
+      ...Array.from({ length: 5 }, () => 'gamma.example')
+    ]
+  );
+  assert.deepEqual(
+    windowTabGroups[1].map((tab) => getSiteFromUrl(tab.url)),
+    ['delta.example', 'delta.example']
+  );
+});
+
+function createSiteGroup(site, tabsCount, startId) {
+  return {
+    site,
+    totalTabs: tabsCount,
+    urlGroups: [
+      {
+        normalizedUrl: `https://${site}`,
+        tabs: Array.from({ length: tabsCount }, (_, index) => ({
+          id: startId + index,
+          url: `https://${site}/${index + 1}`,
+          title: `${site} ${index + 1}`,
+          pinned: false
+        }))
+      }
+    ]
+  };
+}
+
+function getSiteFromUrl(url) {
+  return new URL(url).hostname;
+}
