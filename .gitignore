@@ -6,6 +6,7 @@
 .vscode/
 *.swp
 *.swo
+*.orig
 
 # Logs
 *.log
@@ -26,10 +27,13 @@ dist/
 build/
 coverage/
 .cache/
+.eslintcache
+.nyc_output/
 
 # Extension packages
 *.zip
 *.crx
+*.pem
 
 # Temporary files
 tmp/

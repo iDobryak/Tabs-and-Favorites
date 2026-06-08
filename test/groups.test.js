@@ -9,7 +9,10 @@ import {
   siteHasDuplicateUrls,
   prepareTabsForSorting
 } from '../lib/groups.js';
-import { buildWindowSortPlan, buildWindowTabGroups } from '../lib/tabActions.js';
+import {
+  buildWindowSortPlan,
+  buildWindowTabGroups
+} from '../lib/tabActions.js';
 
 const options = {
   includeQueryParams: false,

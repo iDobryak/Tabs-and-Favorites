@@ -1,56 +1,60 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>Tab Duplicate Cleaner</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <h1>Открытые ссылки</h1>
+    <header class="page-header">
+      <h1 id="appTitle">Open Tabs</h1>
+      <label class="toolbar-language-field" for="uiLanguage">
+        <span id="settingsLanguageLabel"></span>
+        <select id="uiLanguage"></select>
+      </label>
+    </header>
 
     <section class="settings">
       <label>
         <input type="checkbox" id="includeQueryParams" checked />
-        Учитывать query-параметры
+        <span id="includeQueryParamsLabel"></span>
       </label>
 
       <label>
         <input type="checkbox" id="includeHash" />
-        Учитывать hash-атрибуты
+        <span id="includeHashLabel"></span>
       </label>
 
       <label>
         <input type="checkbox" id="ignoreTrailingSlash" checked />
-        Считать /page и /page/ одинаковыми
+        <span id="ignoreTrailingSlashLabel"></span>
       </label>
 
       <label>
         <input type="checkbox" id="protectPinnedTabs" checked />
-        Не закрывать и не переносить закреплённые вкладки
+        <span id="protectPinnedTabsLabel"></span>
       </label>
 
       <label>
         <input type="checkbox" id="showOnlyDuplicateSites" />
-        Показывать только сайты с дублями
+        <span id="showOnlyDuplicateSitesLabel"></span>
       </label>
 
       <label>
         <input type="checkbox" id="allowGroupedDuplicateRemoval" />
-        Удалять дубликаты внутри групп вкладок
+        <span id="allowGroupedDuplicateRemovalLabel"></span>
       </label>
     </section>
 
     <section class="actions">
-      <button id="rescanButton">Обновить список</button>
-      <button id="closeAllDuplicatesButton" class="danger">
-        Удалить все дубликаты
-      </button>
-      <button id="sortCurrentWindowButton">Отсортировать текущее окно</button>
-      <button id="sortAllWindowsButton">Отсортировать все окна</button>
+      <button id="rescanButton"></button>
+      <button id="closeAllDuplicatesButton" class="danger"></button>
+      <button id="sortCurrentWindowButton"></button>
+      <button id="sortAllWindowsButton"></button>
       <div class="action-with-input">
-        <button id="groupSitesToWindowsButton">Разнести сайты по окнам</button>
+        <button id="groupSitesToWindowsButton"></button>
         <label class="inline-number-field" for="tabsPerWindowLimit">
-          <span>Вкладок в окне</span>
+          <span id="tabsPerWindowLimitLabel"></span>
           <input
             id="tabsPerWindowLimit"
             type="number"

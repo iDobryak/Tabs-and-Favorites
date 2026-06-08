@@ -1,243 +1,237 @@
 # Tab Duplicate Cleaner
 
-Расширение для Google Chrome, которое показывает открытые вкладки по всем окнам, группирует их по сайтам и одинаковым URL, помогает удалять дубликаты и сортировать вкладки.
+Chrome extension for reviewing open tabs across all browser windows, finding duplicates, sorting tabs, and redistributing sites into separate windows.
 
-## Возможности
+## What it does
 
-- Автоматический поиск вкладок при открытии popup.
-- Группировка открытых ссылок по сайту.
-- Вложенная группировка по одинаковым URL.
-- Отображение окна Chrome, в котором находится каждая вкладка.
-- Фильтр списка только по сайтам, у которых есть дубли.
-- Удаление всех дубликатов с учётом закреплённых вкладок и Chrome tab groups.
-- Удаление дубликатов только для выбранного сайта.
-- Закрытие отдельных вкладок и всех вкладок выбранного сайта.
-- Переход к выбранной вкладке прямо из popup.
-- Сортировка вкладок в текущем окне без разрушения Chrome tab groups.
-- Сортировка вкладок во всех открытых окнах без разрушения Chrome tab groups.
-- Перенос вкладок по сайтам в новые окна с лимитом вкладок на окно.
-- Подтверждение перед массовым удалением дублей.
-- Подтверждение перед разнесением вкладок по окнам.
-- Настройки сравнения URL:
-  - учитывать query-параметры;
-  - учитывать hash-атрибуты;
-  - считать `/page` и `/page/` одинаковыми;
-  - защищать закреплённые вкладки от закрытия и переноса;
-  - показывать только сайты с дублями;
-  - разрешать или запрещать удаление дублей внутри Chrome tab groups.
+- Scans all open `http` and `https` tabs when the popup opens.
+- Groups tabs first by site, then by normalized URL.
+- Shows the window id for each tab.
+- Highlights duplicate tabs and tabs inside Chrome tab groups.
+- Removes duplicates globally or within a single site.
+- Closes individual tabs or all closable tabs for a site.
+- Sorts tabs in the current window.
+- Sorts tabs in every open window independently.
+- Redistributes sites into newly created windows using a per-window tab limit.
+- Stores popup settings in `chrome.storage.local`.
+- Supports UI localization for English, Russian, Spanish, French, German, and Chinese.
 
-## Структура проекта
+## Current project structure
 
 ```text
-tab-duplicate-cleaner/
+tabs/
 ├── manifest.json
 ├── popup.html
 ├── popup.css
 ├── popup.js
 ├── lib/
 │   ├── groups.js
+│   ├── i18n.js
 │   ├── settings.js
 │   ├── tabActions.js
 │   ├── ui.js
 │   └── url.js
+├── test/
+│   ├── groups.test.js
+│   ├── i18n.test.js
+│   └── url.test.js
+├── icons/
+│   ├── icon16.png
+│   ├── icon48.png
+│   └── icon128.png
+├── LICENSE
 ├── README.md
-├── tasks.md
-└── icons/
-    ├── icon16.png
-    ├── icon48.png
-    └── icon128.png
+├── package.json
+└── tasks.md
 ```
 
-## Установка для разработки
+## Installation for development
 
-1. Склонируйте репозиторий:
+1. Clone the repository.
+2. Install dependencies with `npm install`.
+3. Open `chrome://extensions/`.
+4. Enable `Developer mode`.
+5. Click `Load unpacked`.
+6. Select the project directory.
 
-```bash
-git clone <your-gitlab-repository-url>
-cd tab-duplicate-cleaner
-```
+## Usage
 
-2. Откройте Chrome.
-
-3. Перейдите на страницу расширений:
+1. Open tabs in one or more Chrome windows.
+2. Open the extension popup.
+3. Review the generated tree:
 
 ```text
-chrome://extensions/
+site
+  normalized URL
+    tab
 ```
 
-4. Включите режим разработчика — **Developer mode**.
+4. Use the actions in the popup:
 
-5. Нажмите **Load unpacked**.
+| Action                            | Behavior                                                               |
+| --------------------------------- | ---------------------------------------------------------------------- |
+| `Refresh list`                    | Re-scan all open tabs                                                  |
+| `Remove all duplicates`           | Remove all duplicate tabs that are allowed to be removed               |
+| `Remove site duplicates`          | Remove duplicates only inside one site                                 |
+| `Close site`                      | Close all closable tabs for one site                                   |
+| `Sort current window`             | Sort only the active Chrome window                                     |
+| `Sort all windows`                | Sort every open Chrome window independently                            |
+| `Distribute sites across windows` | Create new windows and move sites into them using the configured limit |
+| `Go to`                           | Focus the target window and activate the tab                           |
+| `Close`                           | Close one tab if current settings allow it                             |
 
-6. Выберите папку проекта `tab-duplicate-cleaner`.
+## How grouping works
 
-7. Нажмите на иконку расширения в панели Chrome.
+### Site grouping
 
-## Как пользоваться
+- The top-level key is the hostname without the leading `www.`.
+- `www.example.com` and `example.com` are treated as the same site.
+- Subdomains stay distinct, so `docs.example.com` and `example.com` are different site groups.
+- Site groups are sorted lexicographically by hostname.
 
-1. Откройте несколько вкладок в одном или нескольких окнах Chrome.
-2. Нажмите на иконку расширения.
-3. Popup автоматически просканирует все открытые вкладки.
-4. Вкладки будут показаны в структуре:
+### URL normalization
+
+Normalization is performed before duplicate detection and before sort keys are built.
+
+- Only `http:` and `https:` URLs are processed.
+- The leading `www.` is removed from the hostname.
+- If `Include query parameters` is disabled, the query string is removed.
+- If `Include query parameters` is enabled, query parameters are sorted into stable order before comparison.
+- If `Include hash fragments` is disabled, the hash part is removed.
+- If `Treat /page and /page/ as the same` is enabled, trailing slashes are removed from non-root paths.
+
+Example with default settings:
 
 ```text
-Сайт
-  URL
-    Вкладка
-    Вкладка-дубликат
+https://www.example.com/path/?b=2&a=1#x
+-> https://example.com/path
 ```
 
-5. Используйте кнопки:
+## Duplicate retention rules
 
-| Кнопка                       | Назначение                                                  |
-| ---------------------------- | ----------------------------------------------------------- |
-| `Обновить список`            | Повторно просканировать открытые вкладки                    |
-| `Удалить все дубликаты`      | Закрыть все дубли, кроме первой вкладки в каждой URL-группе |
-| `Удалить дубли сайта`        | Закрыть дубли только внутри конкретного сайта               |
-| `Закрыть сайт`               | Закрыть все незакреплённые вкладки выбранного сайта         |
-| `Отсортировать текущее окно` | Отсортировать вкладки текущего окна по сайту и URL          |
-| `Отсортировать все окна`     | Отсортировать вкладки в каждом открытом окне                |
-| `Разнести сайты по окнам`    | Сформировать новые окна по порядку списка сайтов с лимитом вкладок на окно |
+Duplicate selection is deterministic and based on the normalized URL group.
 
-Поле рядом с кнопкой `Разнести сайты по окнам` задаёт максимальное число вкладок в одном новом окне. По умолчанию используется `20`.
+- If pinned tab protection is enabled, pinned tabs are never removed.
+- If duplicate removal inside tab groups is disabled, tabs inside Chrome tab groups are never removed.
+- If at least one protected tab exists in the duplicate set, every removable copy is deleted and the protected tabs remain.
+- If there are no protected tabs, the kept tab is chosen by priority:
+  1. tab inside a Chrome tab group;
+  2. pinned tab;
+  3. lower `windowId`;
+  4. lower tab index inside the window.
 
-- Если у одного сайта вкладок больше лимита, этот сайт переносится в отдельное окно целиком.
-- Если несколько соседних сайтов в списке суммарно помещаются в лимит, они накапливаются в одном окне.
-- Следующий сайт переносится уже в новое окно, если добавление его вкладок превысит лимит.
+This means a grouped tab wins over an ungrouped duplicate, and an earlier tab wins only when higher-priority signals are equal.
 
-Для каждой вкладки также доступны кнопки:
+## Sorting algorithm
 
-- `Перейти` — активировать вкладку и сфокусировать её окно.
-- `Закрыть` — закрыть конкретную вкладку, если она не защищена настройками.
+### Sort current window
 
-## Настройки сравнения URL
+`Sort current window` does not move tabs between windows. It only reorders tabs in the active Chrome window.
 
-### Учитывать query-параметры
+- Pinned tabs are fixed in place.
+- Tabs inside Chrome tab groups are fixed in place.
+- Only unpinned tabs outside groups participate in sorting.
+- The extension collects the free indexes currently occupied by those movable tabs.
+- The movable tabs are sorted by:
+  1. site key;
+  2. normalized URL;
+  3. title.
+- After that, the sorted movable tabs are written back only into the collected free indexes.
 
-Если настройка включена, такие ссылки считаются разными:
+Result: grouped and pinned tabs keep their positions, while the normal tabs around them are reordered into a stable site-first order.
 
-```text
-https://example.com/page?a=1
-https://example.com/page?a=2
-```
+### Sort all windows
 
-Если настройка выключена, они считаются одинаковыми:
+`Sort all windows` applies the same algorithm to every open Chrome window independently.
 
-```text
-https://example.com/page
-```
+- There is no cross-window migration during this action.
+- Each window keeps the same set of tabs it had before sorting.
+- The extension builds a separate sort plan for each window and executes it sequentially.
 
-Это удобно для удаления дублей с `utm_source`, `utm_campaign` и другими tracking-параметрами.
+## Site distribution across windows
 
-### Учитывать hash-атрибуты
+`Distribute sites across windows` is the only action that moves tabs between windows.
 
-Если настройка включена, такие ссылки считаются разными:
+- Pinned tabs are excluded from the move when `Do not close or move pinned tabs` is enabled.
+- For each site, movable tabs are first collected from all URL groups.
+- Tabs inside a site are internally sorted by the same keys used for normal sorting: site, normalized URL, title.
+- Sites are processed in the same lexicographic order in which they appear in the popup.
+- The numeric field `Tabs per window` is normalized to a positive integer; invalid values fall back to `20`.
 
-```text
-https://example.com/page#section-1
-https://example.com/page#section-2
-```
+Window packing rules:
 
-Если выключена — hash игнорируется.
+- If one site has more tabs than the configured limit, that site gets its own window anyway.
+- Otherwise, sites are appended to the current target window while the sum stays within the limit.
+- When the next site would exceed the limit, the current batch is finalized and a new target window starts.
+- For each batch, the first tab is moved by creating a new Chrome window from it, and the remaining tabs are moved into that new window in order.
 
-### Считать `/page` и `/page/` одинаковыми
+This packing is greedy and order-preserving. The extension does not attempt bin packing or global optimization.
 
-Если настройка включена, эти ссылки считаются одинаковыми:
+## Settings
 
-```text
-https://example.com/page
-https://example.com/page/
-```
+| Setting                               | Default | Effect                                                                |
+| ------------------------------------- | ------- | --------------------------------------------------------------------- |
+| `Interface language`                  | `Auto`  | Chooses an explicit UI language or resolves it from browser languages |
+| `Include query parameters`            | `true`  | Makes `?a=1` and `?a=2` distinct when enabled                         |
+| `Include hash fragments`              | `false` | Makes `#a` and `#b` distinct when enabled                             |
+| `Treat /page and /page/ as the same`  | `true`  | Normalizes trailing slashes on non-root paths                         |
+| `Do not close or move pinned tabs`    | `true`  | Protects pinned tabs from delete and redistribution operations        |
+| `Show only sites with duplicates`     | `false` | Filters the popup list, but does not change internal grouping         |
+| `Remove duplicates inside tab groups` | `false` | Allows grouped tabs to become deletion candidates                     |
+| `Tabs per window`                     | `20`    | Sets the greedy packing limit for redistribution into new windows     |
 
-### Не закрывать и не переносить закреплённые вкладки
+## Security review
 
-Если настройка включена, pinned-вкладки:
+The current implementation is in a good baseline state for a local browser utility.
 
-- не закрываются при удалении дублей;
-- не перемещаются при разнесении сайтов по окнам.
+- The manifest requests only `tabs` and `storage`.
+- There is no external network access, remote script loading, analytics, or telemetry code.
+- Tab titles, hostnames, and URLs are rendered with `textContent`, which avoids HTML injection in the popup.
+- The extension operates only on `http` and `https` tabs and ignores unsupported schemes such as `file:` and `chrome:`.
+- Bulk-destructive actions require explicit user confirmation.
 
-Если закреплённая вкладка совпадает по URL с обычной вкладкой, закреплённая остаётся, а на удаление выбирается обычная.
+Known operational limits:
 
-### Показывать только сайты с дублями
+- The extension can close or move tabs only after the user triggers an action; there is no background automation.
+- The popup trusts Chrome tab metadata such as title, URL, `pinned`, and `groupId`, which is acceptable for an extension working entirely inside browser APIs.
+- Redistributing tabs creates new windows and does not preserve the original window composition for moved tabs.
 
-Если настройка включена, в popup показываются только те сайты, у которых есть хотя бы одна URL-группа с двумя и более вкладками.
+## Permissions
 
-### Удалять дубликаты внутри групп вкладок
-
-Если настройка выключена, вкладки внутри Chrome tab groups не удаляются как дубли и имеют приоритет сохранения над такими же вкладками вне группы.
-
-Если настройка включена, grouped-вкладки тоже могут удаляться как дубли, но приоритет выбора основной вкладки всё равно сначала учитывает tab group, затем pinned-статус, а затем порядок вкладок в окне.
-
-## Правила работы с дублями и группами
-
-- Если одна вкладка находится в Chrome tab group, а её дубль вне группы, удаляется вкладка вне группы.
-- Если удаление grouped-дублей запрещено, вкладки внутри групп не считаются кандидатами на удаление.
-- Сортировка вкладок не двигает grouped-вкладки и не ломает уже созданные Chrome tab groups.
-- Сортируются только обычные незакреплённые вкладки в свободных позициях между pinned и grouped-вкладками.
-
-## Разрешения Chrome
-
-В `manifest.json` используются разрешения:
+`manifest.json` currently uses:
 
 ```json
 "permissions": ["tabs", "storage"]
 ```
 
-### `tabs`
+- `tabs` is required to enumerate tabs, read URLs and titles, activate tabs, close tabs, and move tabs.
+- `storage` is required to persist popup settings.
 
-Нужно для получения списка открытых вкладок, чтения URL, определения tab group, закрытия дублей и сортировки вкладок.
+## Development
 
-### `storage`
+Useful commands:
 
-Нужно для сохранения пользовательских настроек popup.
-
-## Приватность
-
-Расширение не отправляет данные на серверы и не использует внешние API.
-
-Все операции выполняются локально в браузере пользователя:
-
-- чтение открытых вкладок;
-- группировка URL;
-- поиск дублей;
-- закрытие выбранных вкладок;
-- сортировка вкладок.
-
-Для анализа обрабатываются только вкладки с URL на `http` и `https`.
-
-## Локальная разработка
-
-После изменения файлов `popup.html`, `popup.css`, `popup.js`, файлов в `lib/` или `manifest.json`:
-
-1. Откройте `chrome://extensions/`.
-2. Найдите расширение **Tab Duplicate Cleaner**.
-3. Нажмите кнопку обновления расширения.
-4. Откройте popup заново.
-
-## Публикация в Chrome Web Store
-
-1. Проверьте, что версия в `manifest.json` обновлена.
-2. Подготовьте ZIP-архив содержимого проекта.
-3. Загрузите ZIP в Chrome Developer Dashboard.
-4. Заполните описание, категорию, скриншоты и privacy-раздел.
-5. Отправьте расширение на проверку.
-
-Важно: в ZIP нужно помещать содержимое проекта, а не папку верхнего уровня.
-
-## Пример privacy policy
-
-```text
-Tab Duplicate Cleaner reads the URLs and titles of currently open browser tabs only to detect duplicate tabs and allow the user to close selected duplicates.
-
-The extension does not collect, store, transmit, sell, or share any user data.
-
-All processing happens locally in the browser.
+```bash
+npm test
+npm run lint
+npm run format:check
 ```
 
-## Возможные доработки
+After editing extension files:
 
-- Добавить ручной выбор вкладок для закрытия отдельной кнопкой.
-- Добавить whitelist сайтов, которые нельзя закрывать автоматически.
-- Добавить экспорт списка открытых вкладок в JSON/CSV.
-- Добавить отдельную страницу настроек.
-- Добавить поддержку регулярных правил для игнорирования tracking-параметров.
+1. Open `chrome://extensions/`.
+2. Find `Tab Duplicate Cleaner`.
+3. Click reload.
+4. Reopen the popup.
+
+## Privacy
+
+The extension processes tab metadata locally in the browser.
+
+- No tab data is sent to external services.
+- No user data is stored outside Chrome local extension storage.
+- The project does not include tracking, ads, or telemetry.
+
+## License
+
+This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE).
