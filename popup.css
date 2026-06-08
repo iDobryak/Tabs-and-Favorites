@@ -169,6 +169,11 @@ button.danger {
   color: #a00000;
 }
 
+.badge.grouped {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
 .badge.pinned {
   background: #e6f0ff;
   color: #174ea6;

@@ -4,16 +4,20 @@ import assert from 'node:assert/strict';
 import {
   buildSiteGroups,
   getDuplicateTabIds,
+  getDuplicateTabsForUrlGroup,
   groupTabsByWindow,
+  siteHasDuplicateUrls,
   prepareTabsForSorting
 } from '../lib/groups.js';
-import { buildWindowTabGroups } from '../lib/tabActions.js';
+import { buildWindowSortPlan, buildWindowTabGroups } from '../lib/tabActions.js';
 
 const options = {
   includeQueryParams: false,
   includeHash: false,
   ignoreTrailingSlash: true,
-  protectPinnedTabs: true
+  protectPinnedTabs: true,
+  showOnlyDuplicateSites: false,
+  allowGroupedDuplicateRemoval: false
 };
 
 test('buildSiteGroups groups tabs by site and normalized url', () => {
@@ -50,7 +54,7 @@ test('buildSiteGroups groups tabs by site and normalized url', () => {
   assert.equal(siteGroups[1].urlGroups[0].tabs.length, 2);
 });
 
-test('getDuplicateTabIds skips pinned duplicates when protection is enabled', () => {
+test('getDuplicateTabIds keeps pinned duplicate and removes remaining removable copies', () => {
   const siteGroups = [
     {
       site: 'example.com',
@@ -68,7 +72,55 @@ test('getDuplicateTabIds skips pinned duplicates when protection is enabled', ()
     }
   ];
 
-  assert.deepEqual(getDuplicateTabIds(siteGroups, options), [3]);
+  assert.deepEqual(getDuplicateTabIds(siteGroups, options), [1, 3]);
+});
+
+test('getDuplicateTabsForUrlGroup prefers keeping grouped tab over ungrouped duplicate', () => {
+  const urlGroup = {
+    normalizedUrl: 'https://example.com/path',
+    tabs: [
+      { id: 1, windowId: 1, index: 0, pinned: false, groupId: 2 },
+      { id: 2, windowId: 1, index: 1, pinned: false, groupId: -1 }
+    ]
+  };
+
+  assert.deepEqual(
+    getDuplicateTabsForUrlGroup(urlGroup, options).map((tab) => tab.id),
+    [2]
+  );
+});
+
+test('getDuplicateTabsForUrlGroup keeps grouped duplicates when grouped removal is disabled', () => {
+  const urlGroup = {
+    normalizedUrl: 'https://example.com/path',
+    tabs: [
+      { id: 1, windowId: 1, index: 0, pinned: false, groupId: 5 },
+      { id: 2, windowId: 1, index: 1, pinned: false, groupId: 5 }
+    ]
+  };
+
+  assert.deepEqual(
+    getDuplicateTabsForUrlGroup(urlGroup, options).map((tab) => tab.id),
+    []
+  );
+});
+
+test('getDuplicateTabsForUrlGroup can remove grouped duplicates when option is enabled', () => {
+  const urlGroup = {
+    normalizedUrl: 'https://example.com/path',
+    tabs: [
+      { id: 1, windowId: 1, index: 0, pinned: false, groupId: 5 },
+      { id: 2, windowId: 1, index: 1, pinned: false, groupId: 5 }
+    ]
+  };
+
+  assert.deepEqual(
+    getDuplicateTabsForUrlGroup(urlGroup, {
+      ...options,
+      allowGroupedDuplicateRemoval: true
+    }).map((tab) => tab.id),
+    [2]
+  );
 });
 
 test('groupTabsByWindow collects tabs by windowId', () => {
@@ -82,6 +134,30 @@ test('groupTabsByWindow collects tabs by windowId', () => {
 
   assert.equal(grouped.get(1).length, 2);
   assert.equal(grouped.get(2).length, 1);
+});
+
+test('siteHasDuplicateUrls returns true only for sites with repeated urls', () => {
+  assert.equal(
+    siteHasDuplicateUrls({
+      site: 'example.com',
+      totalTabs: 2,
+      urlGroups: [
+        { normalizedUrl: 'https://example.com/a', tabs: [{ id: 1 }, { id: 2 }] }
+      ]
+    }),
+    true
+  );
+  assert.equal(
+    siteHasDuplicateUrls({
+      site: 'example.com',
+      totalTabs: 2,
+      urlGroups: [
+        { normalizedUrl: 'https://example.com/a', tabs: [{ id: 1 }] },
+        { normalizedUrl: 'https://example.com/b', tabs: [{ id: 2 }] }
+      ]
+    }),
+    false
+  );
 });
 
 test('prepareTabsForSorting computes stable sort fields', () => {
@@ -165,6 +241,56 @@ test('buildWindowTabGroups accumulates sites by display order until limit', () =
     windowTabGroups[1].map((tab) => getSiteFromUrl(tab.url)),
     ['delta.example', 'delta.example']
   );
+});
+
+test('buildWindowSortPlan leaves grouped tabs fixed and sorts only ungrouped tabs', () => {
+  const sortPlan = buildWindowSortPlan(
+    [
+      {
+        id: 1,
+        windowId: 1,
+        index: 0,
+        pinned: false,
+        groupId: -1,
+        url: 'https://zeta.example',
+        title: 'Zeta'
+      },
+      {
+        id: 2,
+        windowId: 1,
+        index: 1,
+        pinned: false,
+        groupId: 7,
+        url: 'https://beta.example',
+        title: 'Beta'
+      },
+      {
+        id: 3,
+        windowId: 1,
+        index: 2,
+        pinned: false,
+        groupId: 7,
+        url: 'https://alpha.example',
+        title: 'Alpha'
+      },
+      {
+        id: 4,
+        windowId: 1,
+        index: 3,
+        pinned: false,
+        groupId: -1,
+        url: 'https://gamma.example',
+        title: 'Gamma'
+      }
+    ],
+    options
+  );
+
+  assert.deepEqual(
+    sortPlan.movableTabs.map((tab) => tab.id),
+    [4, 1]
+  );
+  assert.deepEqual(sortPlan.targetIndexes, [0, 3]);
 });
 
 function createSiteGroup(site, tabsCount, startId) {

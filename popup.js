@@ -1,4 +1,8 @@
-import { buildSiteGroups, getDuplicateTabIds } from './lib/groups.js';
+import {
+  buildSiteGroups,
+  getDuplicateTabIds,
+  siteHasDuplicateUrls
+} from './lib/groups.js';
 import {
   activateTab,
   buildWindowTabGroups,
@@ -18,6 +22,10 @@ const elements = {
   includeHash: document.getElementById('includeHash'),
   ignoreTrailingSlash: document.getElementById('ignoreTrailingSlash'),
   protectPinnedTabs: document.getElementById('protectPinnedTabs'),
+  showOnlyDuplicateSites: document.getElementById('showOnlyDuplicateSites'),
+  allowGroupedDuplicateRemoval: document.getElementById(
+    'allowGroupedDuplicateRemoval'
+  ),
   tabsPerWindowLimit: document.getElementById('tabsPerWindowLimit'),
   rescanButton: document.getElementById('rescanButton'),
   closeAllDuplicatesButton: document.getElementById('closeAllDuplicatesButton'),
@@ -62,6 +70,8 @@ function bindEvents() {
     elements.includeHash,
     elements.ignoreTrailingSlash,
     elements.protectPinnedTabs,
+    elements.showOnlyDuplicateSites,
+    elements.allowGroupedDuplicateRemoval,
     elements.tabsPerWindowLimit
   ].forEach((checkbox) => {
     checkbox.addEventListener('change', async () => {
@@ -86,10 +96,13 @@ async function scanAndRenderWithStatus(statusPrefix = '') {
     .filter((tab) => Boolean(tab.url))
     .filter((tab) => isSupportedUrl(tab.url));
   state.siteGroups = buildSiteGroups(state.tabs, options);
+  const visibleSiteGroups = options.showOnlyDuplicateSites
+    ? state.siteGroups.filter(siteHasDuplicateUrls)
+    : state.siteGroups;
 
   renderSiteGroups({
     elements,
-    siteGroups: state.siteGroups,
+    siteGroups: visibleSiteGroups,
     options,
     onCloseSiteDuplicates: handleCloseSiteDuplicates,
     onCloseSite: handleCloseSite,
@@ -100,7 +113,7 @@ async function scanAndRenderWithStatus(statusPrefix = '') {
   const duplicateCount = getDuplicateTabIds(state.siteGroups, options).length;
   const summary =
     `Открыто вкладок: ${state.tabs.length}. ` +
-    `Сайтов: ${state.siteGroups.length}. ` +
+    `Сайтов: ${visibleSiteGroups.length}/${state.siteGroups.length}. ` +
     `Дубликатов к удалению: ${duplicateCount}.`;
 
   elements.status.textContent = statusPrefix
