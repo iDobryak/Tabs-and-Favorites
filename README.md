@@ -1,4 +1,4 @@
-# Tab Duplicate Cleaner
+# Tab Duplicate Cleaner & Sorter
 
 Chrome extension for reviewing open tabs across all browser windows, finding duplicates, sorting tabs, and redistributing sites into separate windows.
 
@@ -220,7 +220,7 @@ npm run format:check
 After editing extension files:
 
 1. Open `chrome://extensions/`.
-2. Find `Tab Duplicate Cleaner`.
+2. Find `Tab Duplicate Cleaner & Sorter`.
 3. Click reload.
 4. Reopen the popup.
 

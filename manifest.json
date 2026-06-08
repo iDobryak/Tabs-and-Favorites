@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Tab Duplicate Cleaner",
+  "name": "Tab Duplicate Cleaner & Sorter",
   "version": "1.1.0",
   "description": "Find, close and sort duplicate Chrome tabs across all windows.",
   "permissions": ["tabs", "storage"],
   "action": {
-    "default_title": "Tab Duplicate Cleaner",
+    "default_title": "Tab Duplicate Cleaner & Sorter",
     "default_popup": "popup.html"
   },
   "icons": {
